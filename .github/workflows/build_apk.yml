@@ -18,9 +18,15 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y unzip gradle
 
-    - name: Unzip Files
+    - name: Unzip Files and Extract Project
       run: |
         unzip -o *.zip || true
+        # अगर Android प्रोजेक्ट किसी सब-फ़ोल्डर में है, तो उसे बाहर निकालो
+        INNER_DIR=$(find . -mindepth 2 -name "settings.gradle*" -exec dirname {} \;)
+        if [ -n "$INNER_DIR" ]; then
+          echo "Found project inside $INNER_DIR. Moving files to root..."
+          cp -rn $INNER_DIR/* .
+        fi
 
     - name: Set up JDK 17
       uses: actions/setup-java@v4
@@ -30,14 +36,10 @@ jobs:
 
     - name: Build APK
       run: |
-        # अगर gradlew है तो उससे बिल्ड करेगा, नहीं तो सिस्टम Gradle यूज़ करेगा
         if [ -f "./gradlew" ]; then
           chmod +x gradlew
           ./gradlew assembleDebug
         else
-          # प्रोजेक्ट के फ़ोल्डर में जाकर बिल्ड करेगा
-          BUILD_DIR=$(find . -maxdepth 3 -name "build.gradle*" -exec dirname {} \; | head -n 1)
-          cd "$BUILD_DIR"
           gradle assembleDebug
         fi
 
